@@ -26,25 +26,46 @@
 #
 ###
 #
-# usage :./check_certificate.sh -h host -p port [-c crit] [-w warn]
+# usage :./check_certificate.sh -h host -p port [-c crit] [-w warn [-v] [-t seconds]]
 #
 # OPTIONS:
 #    -h  Host
 #    -p  Port
 #    -c  Critical alarm when certificate is N hours from expiring (Optional) (default: 72)
 #    -w  Warning alarm when certificate is N hours from expiring (Optional) (default: 120)
-#    -v  Use the -v flag for verbose output.
+#    -v  Use the -v flag for verbose output (Optional)
+#    -t  Timeout (Optional) (default: 30 seconds)
 #
 ###
 
 function usage() {
-  echo -e "usage :$0 -h host -p port [-c crit] [-w warn]"
+  echo -e "usage :$0 -h host -p port [-c crit] [-w warn] [-v] [-t seconds]"
   echo -e "\nOPTIONS:"
   echo -e "\t-h  Host"
   echo -e "\t-p  Port"
   echo -e "\t-c  Critical alarm when certificate is N hours from expiring (Optional) (default: 72)"
   echo -e "\t-w  Warning alarm when certificate is N hours from expiring (Optional) (default: 120)"
-  echo -e "\t-v  Use the -v flag for verbose output."
+  echo -e "\t-v  Use the -v flag for verbose output (Optional)"
+  echo -e "\t-t  Timeout (Optional) (default: 30 seconds)"
+}
+
+function timeout () 
+{ 
+    local timeout=$1; shift; 
+
+    "$@" <&0 & 
+    cmd_pid=$!; 
+
+    ( for (( i=timeout; i ; i-- )) 
+      do 
+        kill -0 $cmd_pid >& /dev/null || exit; 
+        sleep 1; 
+      done; 
+      kill -0 $cmd_pid >& /dev/null || exit; 
+      echo $(date): "$@" timed out after $timeout seconds 
+      kill -TERM $cmd_pid >& /dev/null 
+    ) 2> /dev/null 
+    wait $cmd_pid 
 }
 
 function fetchCertificate() {
@@ -53,7 +74,11 @@ function fetchCertificate() {
         /bin/rm /tmp/cert_check.log
     fi
 
-    Q 2>&1 /dev/null | openssl s_client -connect "$hostAndPort" -prexit > /tmp/cert_check.log 2>&1
+    if [ -z "$TIMEOUT" ]; then
+        TIMEOUT=30
+    fi
+
+    timeout $TIMEOUT openssl s_client -connect "$hostAndPort" -showcerts -prexit > /tmp/cert_check.log 2>&1
 }
 
 function printMsg () {
@@ -162,7 +187,7 @@ function run() {
     esac
 }
 
-while getopts "?h:p:c:w:v" OPTION; do
+while getopts "?h:p:c:w:vt:" OPTION; do
   case $OPTION in
     h)
       HOST=$OPTARG
@@ -178,6 +203,9 @@ while getopts "?h:p:c:w:v" OPTION; do
     ;;
     v)
       VERB=true
+    ;;
+    t)
+      TIMEOUT=$OPTARG
     ;;
     ?)
       usage
