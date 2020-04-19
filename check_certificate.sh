@@ -34,7 +34,7 @@
 #    -c  Critical alarm when certificate is N hours from expiring (Optional) (default: 72)
 #    -w  Warning alarm when certificate is N hours from expiring (Optional) (default: 120)
 #    -v  Use the -v flag for verbose output (Optional)
-#    -t  Timeout (Optional) (default: 30 seconds)
+#    -t  Timeout (Optional) (default: 5 seconds)
 #
 ###
 
@@ -46,7 +46,7 @@ function usage() {
   echo -e "\t-c  Critical alarm when certificate is N hours from expiring (Optional) (default: 72)"
   echo -e "\t-w  Warning alarm when certificate is N hours from expiring (Optional) (default: 120)"
   echo -e "\t-v  Use the -v flag for verbose output (Optional)"
-  echo -e "\t-t  Timeout (Optional) (default: 30 seconds)"
+  echo -e "\t-t  Timeout (Optional) (default: 5 seconds)"
 }
 
 function timeout () 
@@ -75,7 +75,7 @@ function fetchCertificate() {
     fi
 
     if [ -z "$TIMEOUT" ]; then
-        TIMEOUT=30
+        TIMEOUT=5
     fi
 
     timeout $TIMEOUT openssl s_client -connect "$hostAndPort" -showcerts -prexit > /tmp/cert_check.log 2>&1
